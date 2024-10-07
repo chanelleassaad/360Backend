@@ -17,7 +17,7 @@ const swaggerOptions = {
   swaggerDefinition: {
     openapi: "3.0.0",
     info: {
-      title: "Project API",
+      title: "360 Production API",
       version: "1.0.0",
       description: "API for managing projects",
     },

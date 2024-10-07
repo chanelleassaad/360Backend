@@ -1,11 +1,10 @@
-// routes/projects.js
 const express = require("express");
 const Project = require("../models/Project");
 const router = express.Router();
 
 /**
  * @swagger
- * /api/projects:
+ * /api/project/addProject:
  *   post:
  *     summary: Create a new project
  *     tags: [Projects]
@@ -20,11 +19,15 @@ const router = express.Router();
  *                 type: string
  *               location:
  *                 type: string
+ *               year:
+ *                 type: number
+ *               description:
+ *                 type: string
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
- *               description:
+ *               video:
  *                 type: string
  *     responses:
  *       201:
@@ -32,14 +35,16 @@ const router = express.Router();
  *       400:
  *         description: Invalid input
  */
-router.post("/", async (req, res) => {
-  const { title, location, images, description } = req.body;
+router.post("/addProject", async (req, res) => {
+  const { title, location, year, description, images, video } = req.body;
 
   const project = new Project({
     title,
     location,
-    images,
+    year,
     description,
+    images,
+    video,
   });
 
   try {
@@ -52,7 +57,7 @@ router.post("/", async (req, res) => {
 
 /**
  * @swagger
- * /api/projects:
+ * /api/projects/getProjects:
  *   get:
  *     summary: Get all projects
  *     tags: [Projects]
@@ -70,16 +75,20 @@ router.post("/", async (req, res) => {
  *                     type: string
  *                   location:
  *                     type: string
+ *                   year:
+ *                     type: number
+ *                   description:
+ *                     type: string
  *                   images:
  *                     type: array
  *                     items:
  *                       type: string
- *                   description:
+ *                   video:
  *                     type: string
  *       500:
  *         description: Server error
  */
-router.get("/", async (req, res) => {
+router.get("/getProjects", async (req, res) => {
   try {
     const projects = await Project.find();
     res.status(200).json(projects);

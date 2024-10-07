@@ -1,8 +1,10 @@
-// models/Project.js
 const mongoose = require("mongoose");
 
-// Define the project schema
 const projectSchema = new mongoose.Schema({
+  _id: {
+    type: mongoose.Schema.Types.ObjectId,
+    auto: true,
+  },
   title: {
     type: String,
     required: true,
@@ -11,11 +13,19 @@ const projectSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  images: {
-    type: [String], // Array of strings to hold image URLs
+  year: {
+    type: Number,
     required: true,
   },
   description: {
+    type: String,
+    required: true,
+  },
+  images: {
+    type: [String],
+    required: true,
+  },
+  video: {
     type: String,
     required: true,
   },
