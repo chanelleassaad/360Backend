@@ -1,7 +1,11 @@
-const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} = require("@aws-sdk/client-s3");
 const dotenv = require("dotenv");
 
-dotenv.config()
+dotenv.config();
 
 const bucketName = process.env.BUCKET_NAME;
 const bucketRegion = process.env.BUCKET_REGION;
@@ -17,14 +21,17 @@ const s3 = new S3Client({
 });
 
 const express = require("express");
+const cors = require("cors");
+
 const connectDB = require("./connectDB"); // Adjust the path if necessary
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
-const projectRoutes = require("./routes/projects"); // Import project routes
-const adminRoutes = require("./routes/admin"); // Import admin routes
-const statsRoutes = require("./routes/stats"); // Import admin routes
+const projectRoutes = require("./routes/projects");
+const adminRoutes = require("./routes/admin");
+const statsRoutes = require("./routes/stats");
 
 const app = express();
+app.use(cors());
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -47,7 +54,12 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js"], // Path to the API docs (update if necessary)
+  apis: [
+    "./routes/projects.js",
+    "./routes/admin.js",
+    "./routes/email.js",
+    "./routes/stats.js",
+  ], // Path to the API docs (update if necessary)
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -57,6 +69,10 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
+
+app.get("/api/data", (req, res) => {
+  res.json({ message: "Hello, World!" });
+});
 
 // Start the server
 const PORT = process.env.PORT || 5000;
