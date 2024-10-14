@@ -22,7 +22,7 @@ const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const projectRoutes = require("./routes/projects"); // Import project routes
 const adminRoutes = require("./routes/admin"); // Import admin routes
-const emailRoutes = require("./routes/email"); // Import email routes
+const statsRoutes = require("./routes/stats"); // Import admin routes
 
 const app = express();
 
@@ -47,7 +47,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js"], // Path to the API docs (update if necessary)
+  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js"], // Path to the API docs (update if necessary)
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -56,8 +56,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 // Use project routes
 app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/email", emailRoutes);
-console.log("Email routes mounted at /api/email");
+app.use("/api/stats", statsRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;
