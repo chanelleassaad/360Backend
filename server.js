@@ -15,6 +15,7 @@ const adminRoutes = require("./routes/admin"); // Import admin routes
 const statsRoutes = require("./routes/stats"); // Import email routes
 const imageRoutes = require("./routes/images"); // Import email routes
 const emailRoutes = require("./routes/email"); // Import email routes
+const boxRoutes = require("./routes/box"); // Import email routes
 
 const app = express();
 app.use(cors());
@@ -41,7 +42,7 @@ const swaggerOptions = {
     ],
   },
 
-  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js", "./routes/images.js"], // Path to the API docs (update if necessary)
+  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js", "./routes/images.js", "./routes/box.js"], // Path to the API docs (update if necessary)
 
 };
 
@@ -54,6 +55,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/image", imageRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/box", boxRoutes);
+
 
 app.get("/api/data", (req, res) => {
   res.json({ message: "Hello, World!" });
