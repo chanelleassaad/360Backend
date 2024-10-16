@@ -45,6 +45,7 @@ const upload = multer({ dest: 'uploads/' });
  *       500:
  *         description: Internal server error
  */
+
 router.post("/uploadFile", upload.single('file'), async (req, res) => {
     try {
         console.log("req body", req.body);
