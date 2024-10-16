@@ -24,10 +24,7 @@ require("dotenv").config();
 const connectDB = async () => {
   try {
     const DB_URI = process.env.DB_URI; // Use process.env to access environment variables
-    const connection = await mongoose.connect(DB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const connection = await mongoose.connect(DB_URI);
     console.log("MongoDB connected");
     console.log(`Connected to database: ${connection.connections[0].name}`);
   } catch (error) {
@@ -37,4 +34,3 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
-

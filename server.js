@@ -1,18 +1,17 @@
+
 const dotenv = require("dotenv");
 
-dotenv.config()
+dotenv.config();
 
 const express = require("express");
+const cors = require("cors");
+
 const connectDB = require("./connectDB"); // Adjust the path if necessary
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
-const projectRoutes = require("./routes/projects"); // Import project routes
-const adminRoutes = require("./routes/admin"); // Import admin routes
-const statsRoutes = require("./routes/stats"); // Import admin routes
-const partnerRoutes = require("./routes/partner"); // Import admin routes
-const imageRoutes = require("./routes/images"); 
 
 const app = express();
+app.use(cors());
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -35,7 +34,9 @@ const swaggerOptions = {
       },
     ],
   },
+
   apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js", "./routes/images.js"], // Path to the API docs (update if necessary)
+
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -46,6 +47,10 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/image", imageRoutes);
+
+app.get("/api/data", (req, res) => {
+  res.json({ message: "Hello, World!" });
+});
 
 // Start the server
 const PORT = process.env.PORT || 5000;

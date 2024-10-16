@@ -1,5 +1,5 @@
 const express = require("express");
-const Admin = require("../models/Admin");;
+const Admin = require("../models/Admin");
 const router = express.Router();
 
 /**
@@ -24,20 +24,20 @@ const router = express.Router();
  *                     type: string
  *                   password:
  *                     type: string
- *                   
+ *
  *       500:
  *         description: Server error
  */
 router.get("/getAdmin", async (req, res) => {
-    try {
-      const admins = await Admin.find();
-      res.status(200).json(admins);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  try {
+    const admins = await Admin.find();
+    res.status(200).json(admins);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-  /**
+/**
  * @swagger
  * /api/admin/addAdmin:
  *   post:
@@ -62,36 +62,38 @@ router.get("/getAdmin", async (req, res) => {
  *       500:
  *         description: Server error
  */
-  router.post("/addAdmin", async (req, res) => {
-    const { name, email, password } = req.body;
+router.post("/addAdmin", async (req, res) => {
+  const { name, email, password } = req.body;
 
-    // Validate request body
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: "All fields are required" });
+  // Validate request body
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    // Check if an admin with the same email already exists
+    const existingAdmin = await Admin.findOne({ email });
+    if (existingAdmin) {
+      return res
+        .status(400)
+        .json({ message: "Admin with this email already exists" });
     }
 
-    try {
-        // Check if an admin with the same email already exists
-        const existingAdmin = await Admin.findOne({ email });
-        if (existingAdmin) {
-            return res.status(400).json({ message: "Admin with this email already exists" });
-        }
+    // Create a new Admin document
+    const newAdmin = new Admin({
+      name,
+      email,
+      password,
+    });
 
-        // Create a new Admin document
-        const newAdmin = new Admin({
-            name,
-            email,
-            password,
-        });
+    // Save the new Admin to the database
+    await newAdmin.save();
 
-        // Save the new Admin to the database
-        await newAdmin.save();
-
-        // Return success response
-        res.status(201).json({ message: "Admin added successfully" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    // Return success response
+    res.status(201).json({ message: "Admin added successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -116,23 +118,23 @@ router.get("/getAdmin", async (req, res) => {
  *         description: Server error
  */
 router.delete("/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const admin = await Admin.findByIdAndDelete(id);
-  
-      if (!admin) {
-        return res.status(404).json({ message: "Admin not found" });
-      }
-  
-      res.status(200).json({ message: "Admin deleted successfully" });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+  try {
+    const { id } = req.params;
+    const admin = await Admin.findByIdAndDelete(id);
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
     }
-  });
-  
+
+    res.status(200).json({ message: "Admin deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 /**
  * @swagger
- * /api/admin/checkAdmin:
+ * /api/admin/loginAdmin:
  *   post:
  *     summary: Check if a user is an admin
  *     tags: [Admin]
@@ -143,9 +145,9 @@ router.delete("/:id", async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               email:
+ *               username:
  *                 type: string
- *                 example: "admin@example.com"
+ *                 example: "admin"
  *               password:
  *                 type: string
  *                 example: "adminpassword"
@@ -157,27 +159,28 @@ router.delete("/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post("/checkAdmin", async (req, res) => {
-  const { email, password } = req.body;
+router.post("/loginAdmin", async (req, res) => {
+  const { username, password } = req.body;
 
   // Validate request body
-  if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ message: "username and password are required" });
   }
 
   try {
-      const admin = await Admin.findOne({ email });
+    const admin = await Admin.findOne({ username });
 
-      // Check if the admin exists and the password matches
-      if (admin && admin.password === password) {
-          return res.status(200).json({ message: "User is an admin" });
-      } else {
-          return res.status(401).json({ message: "Invalid credentials" });
-      }
+    // Check if the admin exists and the password matches
+    if (admin && admin.password === password) {
+      return res.status(200).json({ message: "User is an admin" });
+    } else {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
   } catch (error) {
-      res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
-
 
 module.exports = router;
