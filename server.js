@@ -10,6 +10,12 @@ const connectDB = require("./connectDB"); // Adjust the path if necessary
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
+const projectRoutes = require("./routes/projects"); // Import project routes
+const adminRoutes = require("./routes/admin"); // Import admin routes
+const statsRoutes = require("./routes/stats"); // Import email routes
+const imageRoutes = require("./routes/images"); // Import email routes
+const emailRoutes = require("./routes/email"); // Import email routes
+
 const app = express();
 app.use(cors());
 
@@ -47,6 +53,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/image", imageRoutes);
+app.use("/api/email", emailRoutes);
 
 app.get("/api/data", (req, res) => {
   res.json({ message: "Hello, World!" });
