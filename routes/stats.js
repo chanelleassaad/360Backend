@@ -1,6 +1,6 @@
 const express = require("express");
-const Stats = require("../models/Stats");const Stat = require("../models/Stats");
-;
+const Stats = require("../models/Stats");
+const Stat = require("../models/Stats");
 const router = express.Router();
 
 /**
@@ -23,18 +23,18 @@ const router = express.Router();
  *                     type: string
  *                   description:
  *                     type: string
- *                   
+ *
  *       500:
  *         description: Server error
  */
 router.get("/getStats", async (req, res) => {
-    try {
-      const stats = await Stats.find();
-      res.status(200).json(stats);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  try {
+    const stats = await Stats.find();
+    res.status(200).json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * @swagger
@@ -49,10 +49,10 @@ router.get("/getStats", async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
-*                   title:
-*                     type: string
-*                   description:
-*                     type: string
+ *                   title:
+ *                     type: string
+ *                   description:
+ *                     type: string
  *     responses:
  *       201:
  *         description: Stat created successfully
@@ -60,11 +60,11 @@ router.get("/getStats", async (req, res) => {
  *         description: Invalid input
  */
 router.post("/addStats", async (req, res) => {
-  const { title, description} = req.body;
+  const { title, description } = req.body;
 
   const stat = new Stat({
     title,
-    description
+    description,
   });
 
   try {
@@ -75,10 +75,9 @@ router.post("/addStats", async (req, res) => {
   }
 });
 
-
 /**
  * @swagger
- * /api/stats/{id}:
+ * /api/stats/deleteStat/{id}:
  *   delete:
  *     summary: Delete a stat by ID
  *     tags: [Stats]
@@ -97,7 +96,7 @@ router.post("/addStats", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.delete("/:id", async (req, res) => {
+router.delete("/deleteStat/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const stat = await Stat.findByIdAndDelete(id);
@@ -112,10 +111,9 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-
 /**
  * @swagger
- * /api/stats/{id}:
+ * /api/stats/editStat/{id}:
  *   put:
  *     summary: Update a stat by ID
  *     tags: [Stats]
@@ -147,7 +145,7 @@ router.delete("/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.put("/:id", async (req, res) => {
+router.put("/editStat/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -159,7 +157,8 @@ router.put("/:id", async (req, res) => {
 
     // Update fields only if provided in the request body
     if (req.body.title !== undefined) existingStat.title = req.body.title;
-    if (req.body.description !== undefined) existingStat.description = req.body.description;
+    if (req.body.description !== undefined)
+      existingStat.description = req.body.description;
     // Save the updated stat
     const updatedStat = await existingStat.save();
     res.status(200).json(updatedStat);
@@ -167,6 +166,5 @@ router.put("/:id", async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-
 
 module.exports = router;
