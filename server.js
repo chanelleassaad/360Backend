@@ -1,24 +1,7 @@
-const {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-} = require("@aws-sdk/client-s3");
+
 const dotenv = require("dotenv");
 
 dotenv.config();
-
-const bucketName = process.env.BUCKET_NAME;
-const bucketRegion = process.env.BUCKET_REGION;
-const accessKey = process.env.ACCESS_KEY;
-const secretKey = process.env.SECRET_KEY;
-
-const s3 = new S3Client({
-  credentials: {
-    accessKeyId: accessKey,
-    secretAccessKey: secretKey,
-  },
-  region: bucketRegion,
-});
 
 const express = require("express");
 const cors = require("cors");
@@ -26,9 +9,6 @@ const cors = require("cors");
 const connectDB = require("./connectDB"); // Adjust the path if necessary
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
-const projectRoutes = require("./routes/projects");
-const adminRoutes = require("./routes/admin");
-const statsRoutes = require("./routes/stats");
 
 const app = express();
 app.use(cors());
@@ -54,12 +34,9 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: [
-    "./routes/projects.js",
-    "./routes/admin.js",
-    "./routes/email.js",
-    "./routes/stats.js",
-  ], // Path to the API docs (update if necessary)
+
+  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js", "./routes/images.js"], // Path to the API docs (update if necessary)
+
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -69,6 +46,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/image", imageRoutes);
 
 app.get("/api/data", (req, res) => {
   res.json({ message: "Hello, World!" });
