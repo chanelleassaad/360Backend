@@ -1,4 +1,3 @@
-
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -6,16 +5,17 @@ dotenv.config();
 const express = require("express");
 const cors = require("cors");
 
-const connectDB = require("./connectDB"); // Adjust the path if necessary
+const connectDB = require("./connectDB");
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
-const projectRoutes = require("./routes/projects"); // Import project routes
-const adminRoutes = require("./routes/admin"); // Import admin routes
-const statsRoutes = require("./routes/stats"); // Import email routes
-const imageRoutes = require("./routes/images"); // Import email routes
-const emailRoutes = require("./routes/email"); // Import email routes
+const projectRoutes = require("./routes/projects");
+const adminRoutes = require("./routes/admin");
+const statsRoutes = require("./routes/stats");
+const imageRoutes = require("./routes/images");
+const emailRoutes = require("./routes/email");
 const boxRoutes = require("./routes/box"); // Import email routes
+const partnersRoutes = require("./routes/partners");
 
 const app = express();
 app.use(cors());
@@ -42,7 +42,15 @@ const swaggerOptions = {
     ],
   },
 
-  apis: ["./routes/projects.js", "./routes/admin.js", "./routes/email.js",  "./routes/stats.js", "./routes/images.js", "./routes/box.js"], // Path to the API docs (update if necessary)
+  apis: [
+    "./routes/projects.js",
+    "./routes/admin.js",
+    "./routes/email.js",
+    "./routes/stats.js",
+    "./routes/images.js",
+    "./routes/partners.js",
+    "./routes/box.js"
+  ],
 
 };
 
@@ -55,8 +63,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/image", imageRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/partners", partnersRoutes);
 app.use("/api/box", boxRoutes);
-
 
 app.get("/api/data", (req, res) => {
   res.json({ message: "Hello, World!" });
