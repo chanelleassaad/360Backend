@@ -20,7 +20,7 @@ const projectSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: true,
+      required: false,
     },
     images: {
       type: [String],
@@ -28,7 +28,7 @@ const projectSchema = new mongoose.Schema(
     },
     video: {
       type: String,
-      required: true,
+      required: false,
     },
   },
   {
