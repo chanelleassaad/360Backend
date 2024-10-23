@@ -74,10 +74,10 @@ router.get("/getProjects", async (req, res) => {
  *               images:
  *                 type: array
  *                 items:
- *                   type: string
+ *                   type: file
  *                 description: Array of image files
  *               video:
- *                 type: string
+ *                 type: file
  *                 description: Video file
  *     responses:
  *       201:
@@ -145,6 +145,27 @@ router.post(
   }
 );
 
+
+const AWS = require('aws-sdk');
+
+// Update AWS configuration with custom environment variable names
+AWS.config.update({
+  accessKeyId: process.env.ACCESS_KEY,  // Using ACCESS_KEY from .env
+  secretAccessKey: process.env.SECRET_KEY,  // Using SECRET_KEY from .env
+  region: process.env.BUCKET_REGION,  // Using BUCKET_REGION from .env
+});
+
+const s3 = new AWS.S3();
+
+// Function to delete file from S3
+const deleteFileFromS3 = (bucketName, key) => {
+  const params = {
+    Bucket: bucketName,
+    Key: key,
+  };
+  return s3.deleteObject(params).promise();
+};
+
 /**
  * @swagger
  * /api/projects/deleteProject/{id}:
@@ -169,17 +190,43 @@ router.post(
 router.delete("/deleteProject/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const project = await Project.findByIdAndDelete(id);
+    
+    // Find the project first
+    const project = await Project.findById(id);
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
+
+    // Extract the S3 keys from image and video URLs
+    const imageKeys = project.images.map((url) => {
+      return url.split('/').pop(); // Get the file name from the URL
+    });
+
+    const videoKey = project.video ? project.video.split('/').pop() : null;
+
+    // Delete images from S3
+    const deleteImagePromises = imageKeys.map((key) => {
+      return deleteFileFromS3(process.env.BUCKET_NAME, key); // S3 deletion function
+    });
+
+    // Delete video from S3 (if exists)
+    if (videoKey) {
+      await deleteFileFromS3(process.env.BUCKET_NAME, videoKey); // S3 deletion function
+    }
+
+    // Wait for all deletions to complete
+    await Promise.all(deleteImagePromises);
+
+    // Delete project from the database
+    await Project.findByIdAndDelete(id);
 
     res.status(200).json({ message: "Project deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 /**
  * @swagger
