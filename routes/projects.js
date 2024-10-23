@@ -294,12 +294,14 @@ router.put(
       existingProject.title = req.body.title ?? existingProject.title;
       existingProject.location = req.body.location ?? existingProject.location;
       existingProject.year = req.body.year ?? existingProject.year;
-      existingProject.description =
-        req.body.description ?? existingProject.description;
+      existingProject.description = req.body.description ?? existingProject.description;
 
       // Handle image updates
       const newImages = req.files["images"] || []; // Access new images, default to an empty array
       const existingImages = existingProject.images || []; // Current images from the database
+
+      // Log the new images
+      console.log("New Images: ", newImages);
 
       // Delete old images from S3 if they exist and are not in the new images
       const imagesToDelete = existingImages.filter(
@@ -322,43 +324,38 @@ router.put(
           imageKey,
           image.path,
           image.mimetype
-        );
+        ).then(() => `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`);          
       });
 
       const uploadedImageUrls = await Promise.all(imageUploadPromises);
 
+      // Log the uploaded image URLs
+      console.log("Uploaded Image URLs: ", uploadedImageUrls);
+
       // Update images array with new S3 URLs
       existingProject.images = [
         ...existingImages.filter((url) => !imagesToDelete.includes(url)), // Keep existing images that were not deleted
-        ...uploadedImageUrls.map(
-          (url) => `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${url}`
-        ), // Add new images
+        ...uploadedImageUrls // Add new image URLs from S3
       ];
 
       // Handle video updates
-      const video = req.files["video"] ? req.files["video"][0] : null; // Access video using bracket notation
+      const video = req.files["video"] ? req.files["video"][0] : null;
       if (video) {
         // Delete the old video from S3 if it exists
         if (existingProject.video) {
-          const oldVideoKey = existingProject.video.split("/").pop(); // Extract the key from the URL
+          const oldVideoKey = existingProject.video.split("/").pop();
           await deleteFile(process.env.BUCKET_NAME, oldVideoKey); // Delete from S3
         }
 
         // Upload the new video to S3
-        const videoKey = video.originalname; // Use a unique key for S3
+        const videoKey = video.originalname;
         await uploadFile(
           process.env.BUCKET_NAME,
           videoKey,
           video.path,
           video.mimetype
         );
-        existingProject.video = `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${videoKey}`; // Update video URL
-      } else if (!video && existingProject.video) {
-        // If no new video is provided, retain the existing video
-        // If you want to delete the video when no new one is provided, uncomment the lines below
-        const oldVideoKey = existingProject.video.split("/").pop(); // Extract the key from the URL
-        await deleteFile(process.env.BUCKET_NAME, oldVideoKey); // Delete from S3
-        existingProject.video = null; // Remove video URL from the project
+        existingProject.video = `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${videoKey}`;
       }
 
       // Save the updated project
@@ -370,5 +367,8 @@ router.put(
     }
   }
 );
+
+
+
 
 module.exports = router;
