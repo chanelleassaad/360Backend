@@ -145,27 +145,6 @@ router.post(
   }
 );
 
-
-const AWS = require('aws-sdk');
-
-// Update AWS configuration with custom environment variable names
-AWS.config.update({
-  accessKeyId: process.env.ACCESS_KEY,  // Using ACCESS_KEY from .env
-  secretAccessKey: process.env.SECRET_KEY,  // Using SECRET_KEY from .env
-  region: process.env.BUCKET_REGION,  // Using BUCKET_REGION from .env
-});
-
-const s3 = new AWS.S3();
-
-// Function to delete file from S3
-const deleteFileFromS3 = (bucketName, key) => {
-  const params = {
-    Bucket: bucketName,
-    Key: key,
-  };
-  return s3.deleteObject(params).promise();
-};
-
 /**
  * @swagger
  * /api/projects/deleteProject/{id}:
@@ -190,7 +169,7 @@ const deleteFileFromS3 = (bucketName, key) => {
 router.delete("/deleteProject/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Find the project first
     const project = await Project.findById(id);
 
@@ -200,19 +179,19 @@ router.delete("/deleteProject/:id", async (req, res) => {
 
     // Extract the S3 keys from image and video URLs
     const imageKeys = project.images.map((url) => {
-      return url.split('/').pop(); // Get the file name from the URL
+      return url.split("/").pop(); // Get the file name from the URL
     });
 
-    const videoKey = project.video ? project.video.split('/').pop() : null;
+    const videoKey = project.video ? project.video.split("/").pop() : null;
 
     // Delete images from S3
     const deleteImagePromises = imageKeys.map((key) => {
-      return deleteFileFromS3(process.env.BUCKET_NAME, key); // S3 deletion function
+      return deleteFile(process.env.BUCKET_NAME, key); // S3 deletion function
     });
 
     // Delete video from S3 (if exists)
     if (videoKey) {
-      await deleteFileFromS3(process.env.BUCKET_NAME, videoKey); // S3 deletion function
+      await deleteFile(process.env.BUCKET_NAME, videoKey); // S3 deletion function
     }
 
     // Wait for all deletions to complete
@@ -308,7 +287,6 @@ router.put(
   }
 );
 
-
 /**
  * @swagger
  * /api/projects/deleteVideo/{id}:
@@ -330,40 +308,38 @@ router.put(
  *       500:
  *         description: Server error
  */
-router.delete(
-  "/deleteVideo/:id",
-  async (req, res) => {
-    const { id } = req.params;
+router.delete("/deleteVideo/:id", async (req, res) => {
+  const { id } = req.params;
 
-    try {
-      // Retrieve the existing project by ID
-      const existingProject = await Project.findById(id);
-      if (!existingProject) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-
-      // Check if the project has a video to delete
-      if (!existingProject.video) {
-        return res.status(404).json({ message: "No video found for this project" });
-      }
-
-      // Delete the video from S3
-      const oldVideoKey = existingProject.video.split("/").pop(); // Extract the key from the URL
-      await deleteFile(process.env.BUCKET_NAME, oldVideoKey); // Delete video from S3
-
-      // Remove the video URL from the project
-      existingProject.video = null;
-
-      // Save the updated project
-      await existingProject.save();
-      res.status(200).json({ message: "Video deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting video:", error); // Log the error for debugging
-      res.status(500).json({ message: "Server error" });
+  try {
+    // Retrieve the existing project by ID
+    const existingProject = await Project.findById(id);
+    if (!existingProject) {
+      return res.status(404).json({ message: "Project not found" });
     }
-  }
-);
 
+    // Check if the project has a video to delete
+    if (!existingProject.video) {
+      return res
+        .status(404)
+        .json({ message: "No video found for this project" });
+    }
+
+    // Delete the video from S3
+    const oldVideoKey = existingProject.video.split("/").pop(); // Extract the key from the URL
+    await deleteFile(process.env.BUCKET_NAME, oldVideoKey); // Delete video from S3
+
+    // Remove the video URL from the project
+    existingProject.video = null;
+
+    // Save the updated project
+    await existingProject.save();
+    res.status(200).json({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting video:", error); // Log the error for debugging
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 /**
  * @swagger
@@ -428,8 +404,9 @@ router.put(
           imageKey,
           image.path,
           image.mimetype
-        ).then(() => 
-          `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`
+        ).then(
+          () =>
+            `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`
         );
       });
 
@@ -480,55 +457,55 @@ router.put(
  *       500:
  *         description: Server error
  */
-router.delete(
-  "/deleteImages/:id",
-  async (req, res) => {
-    const { id } = req.params;
-    const { imageNames } = req.query; // Array of image names passed as a query parameter
+router.delete("/deleteImages/:id", async (req, res) => {
+  const { id } = req.params;
+  const { imageNames } = req.query; // Array of image names passed as a query parameter
 
-    try {
-      // Ensure imageNames is provided and is an array
-      if (!imageNames || !Array.isArray(imageNames)) {
-        return res.status(400).json({ message: "Image names must be provided as an array" });
-      }
-
-      // Retrieve the existing project by ID
-      const existingProject = await Project.findById(id);
-      if (!existingProject) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-
-      // Filter out images that match any of the image names
-      const imagesToDelete = existingProject.images.filter((imageUrl) =>
-        imageNames.some((imageName) => imageUrl.includes(imageName))
-      );
-
-      if (imagesToDelete.length === 0) {
-        return res.status(404).json({ message: "No matching images found for deletion" });
-      }
-
-      // Delete each image from S3
-      const deletePromises = imagesToDelete.map((imageUrl) => {
-        const imageKey = imageUrl.split("/").pop(); // Extract the key from the URL
-        return deleteFile(process.env.BUCKET_NAME, imageKey); // Delete from S3
-      });
-      await Promise.all(deletePromises); // Wait for all deletions to complete
-
-      // Remove the deleted images from the project's images array
-      existingProject.images = existingProject.images.filter(
-        (imageUrl) => !imagesToDelete.includes(imageUrl)
-      );
-
-      // Save the updated project
-      await existingProject.save();
-      res.status(200).json({ message: "Images deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting images:", error); // Log the error for debugging
-      res.status(500).json({ message: "Server error" });
+  try {
+    // Ensure imageNames is provided and is an array
+    if (!imageNames || !Array.isArray(imageNames)) {
+      return res
+        .status(400)
+        .json({ message: "Image names must be provided as an array" });
     }
-  }
-);
 
+    // Retrieve the existing project by ID
+    const existingProject = await Project.findById(id);
+    if (!existingProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Filter out images that match any of the image names
+    const imagesToDelete = existingProject.images.filter((imageUrl) =>
+      imageNames.some((imageName) => imageUrl.includes(imageName))
+    );
+
+    if (imagesToDelete.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No matching images found for deletion" });
+    }
+
+    // Delete each image from S3
+    const deletePromises = imagesToDelete.map((imageUrl) => {
+      const imageKey = imageUrl.split("/").pop(); // Extract the key from the URL
+      return deleteFile(process.env.BUCKET_NAME, imageKey); // Delete from S3
+    });
+    await Promise.all(deletePromises); // Wait for all deletions to complete
+
+    // Remove the deleted images from the project's images array
+    existingProject.images = existingProject.images.filter(
+      (imageUrl) => !imagesToDelete.includes(imageUrl)
+    );
+
+    // Save the updated project
+    await existingProject.save();
+    res.status(200).json({ message: "Images deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting images:", error); // Log the error for debugging
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 /**
  * @swagger
@@ -572,68 +549,31 @@ router.delete(
  *       500:
  *         description: Server error
  */
-router.put(
-  "/editProjectData/:id",
-  async (req, res) => {
-    const { id } = req.params;
-    const { title, location, year, description } = req.body;
+router.put("/editProjectData/:id", async (req, res) => {
+  const { id } = req.params;
+  const { title, location, year, description } = req.body;
 
-    try {
-      // Retrieve the existing project by ID
-      const existingProject = await Project.findById(id);
-      if (!existingProject) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-
-      // Update the project fields only if they are provided in the request body
-      if (title) existingProject.title = title;
-      if (location) existingProject.location = location;
-      if (year) existingProject.year = year;
-      if (description) existingProject.description = description;
-
-      // Save the updated project
-      const updatedProject = await existingProject.save();
-      res.status(200).json(updatedProject);
-    } catch (error) {
-      console.error("Error updating project:", error); // Log the error for debugging
-      res.status(500).json({ message: "Server error" });
+  try {
+    // Retrieve the existing project by ID
+    const existingProject = await Project.findById(id);
+    if (!existingProject) {
+      return res.status(404).json({ message: "Project not found" });
     }
+
+    // Update the project fields only if they are provided in the request body
+    if (title) existingProject.title = title;
+    if (location) existingProject.location = location;
+    if (year) existingProject.year = year;
+    if (description) existingProject.description = description;
+
+    // Save the updated project
+    const updatedProject = await existingProject.save();
+    res.status(200).json(updatedProject);
+  } catch (error) {
+    console.error("Error updating project:", error); // Log the error for debugging
+    res.status(500).json({ message: "Server error" });
   }
-);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+});
 
 // /**
 //  * @swagger
@@ -731,7 +671,7 @@ router.put(
 //           imageKey,
 //           image.path,
 //           image.mimetype
-//         ).then(() => `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`);          
+//         ).then(() => `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`);
 //       });
 
 //       const uploadedImageUrls = await Promise.all(imageUploadPromises);
@@ -774,8 +714,5 @@ router.put(
 //     }
 //   }
 // );
-
-
-
 
 module.exports = router;

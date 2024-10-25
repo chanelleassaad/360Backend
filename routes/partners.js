@@ -1,30 +1,13 @@
-const {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} = require("@aws-sdk/client-s3");
 const express = require("express");
 const router = express.Router();
 const dotenv = require("dotenv");
+const multer = require("multer");
+const Partner = require("../models/Partners");
+const { uploadFile, deleteFile } = require("../services/s3Service"); // Adjust the path as needed
 
 dotenv.config();
 
-const s3 = new S3Client({
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY,
-    secretAccessKey: process.env.SECRET_KEY,
-  },
-  region: process.env.BUCKET_REGION,
-});
-
-const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
-
-const Partner = require("../models/Partners");
-
-const fs = require("fs");
-const util = require("util");
-const unlinkFile = util.promisify(fs.unlink); // To delete the file after upload
 
 /**
  * @swagger
@@ -94,42 +77,31 @@ router.get("/getPartners", async (req, res) => {
 router.post("/addPartner", upload.single("image"), async (req, res) => {
   const { fullName, quote, description } = req.body;
 
-  console.log(req);
-
   // Ensure that the image file is provided
   if (!req.file) {
     return res.status(400).json({ message: "Image is required" });
   }
 
-  // Create the file stream
-  const fileStream = fs.createReadStream(req.file.path);
-
-  // Parameters for uploading to S3
-  const params = {
-    Bucket: process.env.BUCKET_NAME,
-    Key: req.file.originalname, // You may want to consider a more unique key
-    Body: fileStream,
-    ContentType: req.file.mimetype,
-  };
-
   try {
     // Upload the file to S3
-    const command = new PutObjectCommand(params);
-    await s3.send(command);
+    const imageKey = req.file.originalname; // You may want to consider a more unique key
+    await uploadFile(
+      process.env.BUCKET_NAME,
+      imageKey,
+      req.file.path,
+      req.file.mimetype
+    );
 
     // Create a new Partner instance
     const partner = new Partner({
       fullName,
       quote,
       description,
-      imageUrl: `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${req.file.originalname}`, // Set the S3 image URL
+      imageUrl: `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${imageKey}`, // Set the S3 image URL
     });
 
     // Save the partner to the database
     const savedPartner = await partner.save();
-
-    // Remove the file from local storage after upload
-    await unlinkFile(req.file.path);
 
     // Send back the saved partner
     res.status(201).json(savedPartner);
@@ -163,7 +135,6 @@ router.post("/addPartner", upload.single("image"), async (req, res) => {
  *       500:
  *         description: Server error
  */
-
 router.delete("/deletePartner/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -176,17 +147,10 @@ router.delete("/deletePartner/:id", async (req, res) => {
     }
 
     // Extract the S3 key from the image URL
-    const imageUrl = partner.imageUrl;
-    const imageKey = imageUrl.split("/").pop(); // This assumes the image URL is formatted correctly
+    const imageKey = partner.imageUrl.split("/").pop(); // This assumes the image URL is formatted correctly
 
     // Delete the image from S3
-    const deleteParams = {
-      Bucket: process.env.BUCKET_NAME,
-      Key: imageKey,
-    };
-
-    const deleteCommand = new DeleteObjectCommand(deleteParams);
-    await s3.send(deleteCommand);
+    await deleteFile(process.env.BUCKET_NAME, imageKey);
 
     // Now delete the partner from the database
     await Partner.findByIdAndDelete(id);
@@ -259,33 +223,24 @@ router.put("/editPartner/:id", upload.single("image"), async (req, res) => {
     if (req.file) {
       // Extract the current image key from the existing URL
       const oldImageUrl = existingPartner.imageUrl;
-      const oldImageKey = oldImageUrl.split("/").pop();
+      const oldImageKey = oldImageUrl ? oldImageUrl.split("/").pop() : null;
 
-      // Delete the old image from S3
-      const deleteParams = {
-        Bucket: process.env.BUCKET_NAME,
-        Key: oldImageKey,
-      };
-      const deleteCommand = new DeleteObjectCommand(deleteParams);
-      await s3.send(deleteCommand);
+      // Delete the old image from S3 if it exists
+      if (oldImageKey) {
+        await deleteFile(process.env.BUCKET_NAME, oldImageKey);
 
-      // Upload the new image to S3
-      const fileStream = fs.createReadStream(req.file.path);
-      const uploadParams = {
-        Bucket: process.env.BUCKET_NAME,
-        Key: req.file.originalname, // Ensure uniqueness in production
-        Body: fileStream,
-        ContentType: req.file.mimetype,
-      };
+        // Upload the new image to S3
+        const newImageKey = req.file.originalname; // Ensure uniqueness in production
+        await uploadFile(
+          process.env.BUCKET_NAME,
+          newImageKey,
+          req.file.path,
+          req.file.mimetype
+        );
 
-      const uploadCommand = new PutObjectCommand(uploadParams);
-      await s3.send(uploadCommand);
-
-      // Update the image URL with the new image
-      existingPartner.imageUrl = `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${req.file.originalname}`;
-
-      // Remove the local file after upload
-      await unlinkFile(req.file.path);
+        // Update the image URL with the new image
+        existingPartner.imageUrl = `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${newImageKey}`;
+      }
     }
 
     // Save the updated partner

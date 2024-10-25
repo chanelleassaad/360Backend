@@ -12,12 +12,11 @@ const swaggerUi = require("swagger-ui-express");
 const projectRoutes = require("./routes/projects");
 const adminRoutes = require("./routes/admin");
 const statsRoutes = require("./routes/stats");
-const imageRoutes = require("./routes/images");
 const emailRoutes = require("./routes/email");
 const boxRoutes = require("./routes/box");
 const partnersRoutes = require("./routes/partners");
-const videoRoutes = require("./routes/videos");
-
+// const imageRoutes = require("./routes/images");
+// const videoRoutes = require("./routes/videos");
 
 const app = express();
 app.use(cors());
@@ -49,8 +48,6 @@ const swaggerOptions = {
     "./routes/admin.js",
     "./routes/email.js",
     "./routes/stats.js",
-    "./routes/images.js",
-    "./routes/videos.js",
     "./routes/partners.js",
     "./routes/box.js",
   ],
@@ -63,15 +60,11 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/stats", statsRoutes);
-app.use("/api/image", imageRoutes);
-app.use("/api/video", videoRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/partners", partnersRoutes);
 app.use("/api/box", boxRoutes);
-
-app.get("/api/data", (req, res) => {
-  res.json({ message: "Hello, World!" });
-});
+// app.use("/api/image", imageRoutes);
+// app.use("/api/video", videoRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;

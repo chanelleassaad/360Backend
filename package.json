@@ -17,8 +17,8 @@
   "homepage": "https://github.com/chanelleassaad/360Backend#readme",
   "description": "",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.670.0",
-    "aws-sdk": "^2.1691.0",
+    "@aws-sdk/client-dynamodb": "^3.679.0",
+    "@aws-sdk/client-s3": "^3.679.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
