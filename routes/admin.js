@@ -1,6 +1,63 @@
 const express = require("express");
 const Admin = require("../models/Admin");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+
+/**
+ * @swagger
+ * /api/admin/loginAdmin:
+ *   post:
+ *     summary: Check if a user is an admin
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "admin"
+ *               password:
+ *                 type: string
+ *                 example: "adminpassword"
+ *     responses:
+ *       200:
+ *         description: User is an admin
+ *       401:
+ *         description: Invalid credentials
+ *       500:
+ *         description: Server error
+ */
+router.post("/loginAdmin", async (req, res) => {
+  const { username, password } = req.body;
+
+  // Validate request body
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ message: "username and password are required" });
+  }
+
+  try {
+    const admin = await Admin.findOne({ username });
+
+    // Check if the admin exists and the password matches
+    if (admin && admin.password === password) {
+      // return res.status(200).json({ message: "User is an admin" });
+      const JWT_SECRET = process.env.JWT_SECRET;
+      const accessToken = jwt.sign({ username }, JWT_SECRET);
+      return res
+        .status(200)
+        .json({ message: "User Logged in Successfully", accessToken });
+    } else {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * @swagger
@@ -127,57 +184,6 @@ router.delete("/:id", async (req, res) => {
     }
 
     res.status(200).json({ message: "Admin deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-/**
- * @swagger
- * /api/admin/loginAdmin:
- *   post:
- *     summary: Check if a user is an admin
- *     tags: [Admin]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 example: "admin"
- *               password:
- *                 type: string
- *                 example: "adminpassword"
- *     responses:
- *       200:
- *         description: User is an admin
- *       401:
- *         description: Invalid credentials
- *       500:
- *         description: Server error
- */
-router.post("/loginAdmin", async (req, res) => {
-  const { username, password } = req.body;
-
-  // Validate request body
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ message: "username and password are required" });
-  }
-
-  try {
-    const admin = await Admin.findOne({ username });
-
-    // Check if the admin exists and the password matches
-    if (admin && admin.password === password) {
-      return res.status(200).json({ message: "User is an admin" });
-    } else {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,12 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const dotenv = require("dotenv");
 const multer = require("multer");
 const Partner = require("../models/Partners");
 const { uploadFile, deleteFile } = require("../services/s3Service"); // Adjust the path as needed
-
-dotenv.config();
-
+const requireAuths = require("../middlewares/requireAuths");
 const upload = multer({ dest: "uploads/" });
 
 /**
@@ -74,45 +71,50 @@ router.get("/getPartners", async (req, res) => {
  *       400:
  *         description: Invalid input
  */
-router.post("/addPartner", upload.single("image"), async (req, res) => {
-  const { fullName, quote, description } = req.body;
+router.post(
+  "/addPartner",
+  requireAuths,
+  upload.single("image"),
+  async (req, res) => {
+    const { fullName, quote, description } = req.body;
 
-  // Ensure that the image file is provided
-  if (!req.file) {
-    return res.status(400).json({ message: "Image is required" });
+    // Ensure that the image file is provided
+    if (!req.file) {
+      return res.status(400).json({ message: "Image is required" });
+    }
+
+    try {
+      // Upload the file to S3
+      const imageKey = req.file.originalname; // You may want to consider a more unique key
+      await uploadFile(
+        process.env.BUCKET_NAME,
+        imageKey,
+        req.file.path,
+        req.file.mimetype
+      );
+
+      // Create a new Partner instance
+      const partner = new Partner({
+        fullName,
+        quote,
+        description,
+        imageUrl: `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${imageKey}`, // Set the S3 image URL
+      });
+
+      // Save the partner to the database
+      const savedPartner = await partner.save();
+
+      // Send back the saved partner
+      res.status(201).json(savedPartner);
+    } catch (error) {
+      // Log error and return response
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while saving the partner" });
+    }
   }
-
-  try {
-    // Upload the file to S3
-    const imageKey = req.file.originalname; // You may want to consider a more unique key
-    await uploadFile(
-      process.env.BUCKET_NAME,
-      imageKey,
-      req.file.path,
-      req.file.mimetype
-    );
-
-    // Create a new Partner instance
-    const partner = new Partner({
-      fullName,
-      quote,
-      description,
-      imageUrl: `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${imageKey}`, // Set the S3 image URL
-    });
-
-    // Save the partner to the database
-    const savedPartner = await partner.save();
-
-    // Send back the saved partner
-    res.status(201).json(savedPartner);
-  } catch (error) {
-    // Log error and return response
-    console.error(error);
-    res
-      .status(500)
-      .json({ message: "An error occurred while saving the partner" });
-  }
-});
+);
 
 /**
  * @swagger
@@ -135,7 +137,7 @@ router.post("/addPartner", upload.single("image"), async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.delete("/deletePartner/:id", async (req, res) => {
+router.delete("/deletePartner/:id", requireAuths, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -202,53 +204,58 @@ router.delete("/deletePartner/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.put("/editPartner/:id", upload.single("image"), async (req, res) => {
-  const { id } = req.params;
+router.put(
+  "/editPartner/:id",
+  requireAuths,
+  upload.single("image"),
+  async (req, res) => {
+    const { id } = req.params;
 
-  try {
-    // Retrieve the existing partner
-    const existingPartner = await Partner.findById(id);
-    if (!existingPartner) {
-      return res.status(404).json({ message: "Partner not found" });
-    }
-
-    // Update fields only if provided in the request body
-    if (req.body.fullName !== undefined)
-      existingPartner.fullName = req.body.fullName;
-    if (req.body.quote !== undefined) existingPartner.quote = req.body.quote;
-    if (req.body.description !== undefined)
-      existingPartner.description = req.body.description;
-
-    // Handle image update if a new image is uploaded
-    if (req.file) {
-      // Extract the current image key from the existing URL
-      const oldImageUrl = existingPartner.imageUrl;
-      const oldImageKey = oldImageUrl ? oldImageUrl.split("/").pop() : null;
-
-      // Delete the old image from S3 if it exists
-      if (oldImageKey) {
-        await deleteFile(process.env.BUCKET_NAME, oldImageKey);
-
-        // Upload the new image to S3
-        const newImageKey = req.file.originalname; // Ensure uniqueness in production
-        await uploadFile(
-          process.env.BUCKET_NAME,
-          newImageKey,
-          req.file.path,
-          req.file.mimetype
-        );
-
-        // Update the image URL with the new image
-        existingPartner.imageUrl = `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${newImageKey}`;
+    try {
+      // Retrieve the existing partner
+      const existingPartner = await Partner.findById(id);
+      if (!existingPartner) {
+        return res.status(404).json({ message: "Partner not found" });
       }
-    }
 
-    // Save the updated partner
-    const updatedPartner = await existingPartner.save();
-    res.status(200).json(updatedPartner);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+      // Update fields only if provided in the request body
+      if (req.body.fullName !== undefined)
+        existingPartner.fullName = req.body.fullName;
+      if (req.body.quote !== undefined) existingPartner.quote = req.body.quote;
+      if (req.body.description !== undefined)
+        existingPartner.description = req.body.description;
+
+      // Handle image update if a new image is uploaded
+      if (req.file) {
+        // Extract the current image key from the existing URL
+        const oldImageUrl = existingPartner.imageUrl;
+        const oldImageKey = oldImageUrl ? oldImageUrl.split("/").pop() : null;
+
+        // Delete the old image from S3 if it exists
+        if (oldImageKey) {
+          await deleteFile(process.env.BUCKET_NAME, oldImageKey);
+
+          // Upload the new image to S3
+          const newImageKey = req.file.originalname; // Ensure uniqueness in production
+          await uploadFile(
+            process.env.BUCKET_NAME,
+            newImageKey,
+            req.file.path,
+            req.file.mimetype
+          );
+
+          // Update the image URL with the new image
+          existingPartner.imageUrl = `https://${process.env.BUCKET_NAME}.s3.amazonaws.com/${newImageKey}`;
+        }
+      }
+
+      // Save the updated partner
+      const updatedPartner = await existingPartner.save();
+      res.status(200).json(updatedPartner);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   }
-});
+);
 
 module.exports = router;

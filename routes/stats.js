@@ -2,6 +2,7 @@ const express = require("express");
 const Stats = require("../models/Stats");
 const Stat = require("../models/Stats");
 const router = express.Router();
+const requireAuths = require("../middlewares/requireAuths");
 
 /**
  * @swagger
@@ -59,7 +60,7 @@ router.get("/getStats", async (req, res) => {
  *       400:
  *         description: Invalid input
  */
-router.post("/addStats", async (req, res) => {
+router.post("/addStats", requireAuths, async (req, res) => {
   const { title, description } = req.body;
 
   const stat = new Stat({
@@ -96,7 +97,7 @@ router.post("/addStats", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.delete("/deleteStat/:id", async (req, res) => {
+router.delete("/deleteStat/:id", requireAuths, async (req, res) => {
   try {
     const { id } = req.params;
     const stat = await Stat.findByIdAndDelete(id);
@@ -145,7 +146,7 @@ router.delete("/deleteStat/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.put("/editStat/:id", async (req, res) => {
+router.put("/editStat/:id", requireAuths, async (req, res) => {
   const { id } = req.params;
 
   try {

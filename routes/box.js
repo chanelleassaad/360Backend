@@ -1,6 +1,7 @@
 const express = require("express");
 const Box = require("../models/Box");
 const router = express.Router();
+const requireAuths = require("../middlewares/requireAuths");
 
 /**
  * @swagger
@@ -60,7 +61,7 @@ router.get("/getBoxDescription", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.put("/updateBoxDescription", async (req, res) => {
+router.put("/updateBoxDescription", requireAuths, async (req, res) => {
   try {
     const { description } = req.body;
 
